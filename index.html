@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>ระบบบันทึกเวลาพนักงาน</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-dark: #1a1c23;
+            --surface-dark: #252831;
+            --border-color: #3b404d;
+            --primary-text: #e0e0e0;
+            --secondary-text: #8a91a0;
+            --accent-blue: #3b82f6;
+            --accent-green: #22c55e;
+            --accent-red: #ef4444;
+            --accent-yellow: #eab308;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Kanit', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--primary-text);
+            overscroll-behavior: none;
+        }
+
+        .app-container { padding: 1rem; max-width: 100%; }
+
+        .app-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 1.5rem; padding: 0.5rem; background-color: var(--surface-dark);
+            border-radius: 12px; border: 1px solid var(--border-color);
+        }
+        .period-selector { display: flex; align-items: center; gap: 0.75rem; }
+        .period-selector button { background: none; border: none; color: var(--primary-text); font-size: 1.2rem; cursor: pointer; }
+        .date-display { font-size: 1.1rem; font-weight: 600; }
+        
+        .header-actions button {
+            background: none; border: none; color: var(--secondary-text); font-size: 1.2rem;
+            cursor: pointer; margin-left: 1rem; transition: color 0.2s;
+        }
+        .header-actions button:hover { color: var(--accent-blue); }
+
+        .table-container {
+            width: 100%; overflow-x: auto; border: 1px solid var(--border-color);
+            border-radius: 12px; background-color: var(--surface-dark);
+        }
+        table { width: 100%; border-collapse: collapse; white-space: nowrap; }
+        th, td {
+            padding: 0.75rem; text-align: center;
+            border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color);
+        }
+        th {
+            background-color: #313542; font-weight: 500;
+            position: sticky; top: 0; z-index: 2;
+        }
+        td:first-child, th:first-child {
+            position: sticky; left: 0; background-color: var(--surface-dark);
+            z-index: 1; text-align: left; min-width: 180px;
+        }
+        th:last-child, td:last-child { border-right: none; }
+        tr:last-child td { border-bottom: none; }
+
+        .employee-info { display: flex; align-items: center; gap: 0.75rem; }
+        .employee-details .name { font-weight: 500; }
+        .employee-details .id { font-size: 0.8rem; color: var(--secondary-text); }
+        .employee-actions button {
+            display: none; background: none; border: none; color: var(--secondary-text);
+            cursor: pointer; font-size: 0.9rem; transition: color 0.2s;
+        }
+        .employee-actions button:hover { color: var(--accent-yellow); }
+        .admin-mode .employee-actions button { display: inline-block; }
+
+        .status-btn {
+            width: 32px; height: 32px; border-radius: 50%; border: 2px solid;
+            font-weight: 700; cursor: not-allowed; transition: transform 0.2s, background-color 0.2s;
+        }
+        .admin-mode .status-btn { cursor: pointer; }
+        .status-btn:active { transform: scale(0.9); }
+        .status-n { background-color: #22c55e20; border-color: var(--accent-green); color: var(--accent-green); }
+        .status-f { background-color: #ef444420; border-color: var(--accent-red); color: var(--accent-red); }
+
+        .summary-btn {
+            background: linear-gradient(145deg, #3b82f6, #6366f1); color: white; border: none;
+            padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; font-family: 'Kanit', sans-serif;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .summary-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(0,0,0,0.4); }
+
+        .add-employee-btn {
+            display: none; width: 100%; padding: 1rem; margin-top: 1.5rem;
+            background: linear-gradient(145deg, var(--accent-green), #16a34a);
+            color: white; border: none; border-radius: 12px; font-size: 1.1rem;
+            font-family: 'Kanit', sans-serif; cursor: pointer; font-weight: 500;
+            box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3); transition: transform 0.2s;
+        }
+        .admin-mode .add-employee-btn { display: block; }
+        .add-employee-btn:hover { transform: translateY(-2px); }
+
+        /* Modal Styles */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.7); backdrop-filter: blur(5px);
+            justify-content: center; align-items: flex-start; /* Align to top for scroll */
+            z-index: 100; overflow-y: auto; padding: 2rem 0;
+        }
+        .modal-content {
+            background-color: var(--surface-dark); padding: 2rem; border-radius: 16px;
+            border: 1px solid var(--border-color); width: 90%; max-width: 500px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin-bottom: 2rem;
+        }
+        .modal-content h3 { margin-bottom: 1.5rem; text-align: center; }
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; margin-bottom: 0.5rem; color: var(--secondary-text); }
+        .form-group input {
+            width: 100%; padding: 0.75rem; background-color: var(--bg-dark);
+            border: 1px solid var(--border-color); border-radius: 8px;
+            color: var(--primary-text); font-family: 'Kanit', sans-serif; font-size: 1rem;
+        }
+        .modal-actions { display: flex; gap: 1rem; margin-top: 2rem; }
+        .modal-actions button {
+            flex: 1; padding: 0.75rem; border-radius: 8px; border: none;
+            font-family: 'Kanit', sans-serif; font-size: 1rem; font-weight: 500; cursor: pointer;
+        }
+        .btn-save { background-color: var(--accent-blue); color: white; }
+        .btn-cancel, .btn-close { background-color: #4b5563; color: white; }
+
+        /* Summary Modal Specific Styles */
+        #summaryModal .summary-section { margin-bottom: 1.5rem; }
+        #summaryModal .summary-title {
+            font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem;
+            padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-color);
+        }
+        #summaryModal .summary-item {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 0.75rem;
+        }
+        #summaryModal .summary-item label { color: var(--primary-text); }
+        #summaryModal .summary-item .value { font-weight: 500; }
+        #summaryModal .summary-item input {
+            width: 120px; text-align: right; padding: 0.5rem;
+        }
+        #summaryModal .total-income { color: var(--accent-green); }
+        #summaryModal .total-deduction { color: var(--accent-red); }
+        #summaryModal .net-income-section {
+            margin-top: 2rem; padding-top: 1.5rem; border-top: 2px solid var(--border-color);
+            text-align: center;
+        }
+        #summaryModal .net-income-label { font-size: 1.2rem; color: var(--secondary-text); }
+        #summaryModal .net-income-value {
+            font-size: 2.5rem; font-weight: 700; color: white;
+            text-shadow: 0 0 10px var(--accent-blue);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container" id="app-container">
+        <header class="app-header">
+            <div class="period-selector">
+                <button id="prevMonthBtn"><i class="fas fa-chevron-left"></i></button>
+                <div class="date-display" id="dateDisplay"></div>
+                <button id="nextMonthBtn"><i class="fas fa-chevron-right"></i></button>
+            </div>
+            <div class="header-actions">
+                <button id="searchBtn"><i class="fas fa-search"></i></button>
+                <button id="adminBtn"><i class="fas fa-key"></i></button>
+            </div>
+        </header>
+
+        <div class="table-container">
+            <table id="attendanceTable">
+                <thead></thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+        
+        <button class="add-employee-btn" id="addEmployeeBtn"><i class="fas fa-plus-circle"></i> เพิ่มพนักงาน</button>
+    </div>
+
+    <!-- Employee Form Modal -->
+    <div class="modal-overlay" id="employeeModal">
+        <div class="modal-content">
+            <h3 id="modalTitle"></h3>
+            <form id="employeeForm">
+                <input type="hidden" id="employeeIdInput">
+                <div class="form-group">
+                    <label for="employeeNameInput">ชื่อ-สกุล</label>
+                    <input type="text" id="employeeNameInput" required>
+                </div>
+                <div class="form-group">
+                    <label for="employeeCodeInput">รหัสพนักงาน</label>
+                    <input type="text" id="employeeCodeInput" required>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancel" id="cancelBtn">ยกเลิก</button>
+                    <button type="submit" class="btn-save">บันทึก</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Summary Modal -->
+    <div class="modal-overlay" id="summaryModal">
+        <div class="modal-content">
+            <h3 id="summaryModalTitle"></h3>
+            <div id="summaryContent"></div>
+            <div class="modal-actions">
+                <button type="button" class="btn-close" id="closeSummaryBtn">ปิด</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- CONSTANTS ---
+    const DAILY_WAGE = 600;
+
+    // --- DATA ---
+    let state = {
+        isAdmin: false,
+        currentDate: new Date(),
+        employees: [
+            { id: 'EMP001', name: 'สมชาย ใจดี', attendance: {}, financials: {} },
+            { id: 'EMP002', name: 'สมหญิง มุ่งมั่น', attendance: {}, financials: {} },
+            { id: 'EMP003', name: 'มานะ อดทน', attendance: {}, financials: {} }
+        ]
+    };
+
+    // --- DOM ELEMENTS ---
+    const dateDisplay = document.getElementById('dateDisplay');
+    const tableHead = document.querySelector('#attendanceTable thead');
+    const tableBody = document.getElementById('tableBody');
+    const adminBtn = document.getElementById('adminBtn');
+    const appContainer = document.getElementById('app-container');
+    const addEmployeeBtn = document.getElementById('addEmployeeBtn');
+    
+    const employeeModal = document.getElementById('employeeModal');
+    const employeeForm = document.getElementById('employeeForm');
+    const modalTitle = document.getElementById('modalTitle');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const employeeIdInput = document.getElementById('employeeIdInput');
+    const employeeNameInput = document.getElementById('employeeNameInput');
+    const employeeCodeInput = document.getElementById('employeeCodeInput');
+
+    const summaryModal = document.getElementById('summaryModal');
+    const summaryModalTitle = document.getElementById('summaryModalTitle');
+    const summaryContent = document.getElementById('summaryContent');
+    const closeSummaryBtn = document.getElementById('closeSummaryBtn');
+
+    // --- FUNCTIONS ---
+    function getPayPeriodDates(date) {
+        const dates = [];
+        let startDate = new Date(date.getFullYear(), date.getMonth() - 1, 16);
+        for (let i = 0; i < 31; i++) {
+            dates.push(new Date(startDate));
+            startDate.setDate(startDate.getDate() + 1);
+        }
+        return dates;
+    }
+
+    function renderApp() {
+        const dates = getPayPeriodDates(state.currentDate);
+        let headerHtml = '<tr><th>พนักงาน</th>';
+        dates.forEach(d => { headerHtml += `<th>${d.getDate()}</th>`; });
+        headerHtml += '<th>สรุปผล</th></tr>';
+        tableHead.innerHTML = headerHtml;
+
+        let bodyHtml = '';
+        state.employees.forEach(emp => {
+            bodyHtml += `<tr data-id="${emp.id}">
+                <td>
+                    <div class="employee-info">
+                        <div class="employee-details">
+                            <div class="name">${emp.name}</div>
+                            <div class="id">${emp.id}</div>
+                        </div>
+                        <div class="employee-actions">
+                            <button class="edit-btn"><i class="fas fa-pencil-alt"></i></button>
+                            <button class="delete-btn"><i class="fas fa-trash-alt"></i></button>
+                        </div>
+                    </div>
+                </td>`;
+            dates.forEach(d => {
+                const dateString = d.toISOString().split('T')[0];
+                const status = emp.attendance[dateString] || 'F';
+                bodyHtml += `<td><button class="status-btn status-${status.toLowerCase()}" data-date="${dateString}">${status}</button></td>`;
+            });
+            bodyHtml += `<td><button class="summary-btn">สรุปรายได้</button></td></tr>`;
+        });
+        tableBody.innerHTML = bodyHtml;
+
+        dateDisplay.textContent = state.currentDate.toLocaleDateString('th-TH', { month: 'long', year: 'numeric' });
+        appContainer.classList.toggle('admin-mode', state.isAdmin);
+        adminBtn.style.color = state.isAdmin ? 'var(--accent-yellow)' : 'var(--secondary-text)';
+    }
+
+    function showEmployeeModal(mode, empId = null) {
+        employeeForm.reset();
+        if (mode === 'add') {
+            modalTitle.textContent = 'เพิ่มพนักงานใหม่';
+            employeeIdInput.value = '';
+        } else if (mode === 'edit') {
+            modalTitle.textContent = 'แก้ไขข้อมูลพนักงาน';
+            const emp = state.employees.find(e => e.id === empId);
+            if (emp) {
+                employeeIdInput.value = emp.id;
+                employeeNameInput.value = emp.name;
+                employeeCodeInput.value = emp.id;
+            }
+        }
+        employeeModal.style.display = 'flex';
+    }
+
+    function hideEmployeeModal() {
+        employeeModal.style.display = 'none';
+    }
+
+    function showSummaryModal(empId) {
+        const emp = state.employees.find(e => e.id === empId);
+        if (!emp) return;
+
+        summaryModalTitle.textContent = `สรุปรายได้: ${emp.name}`;
+        
+        function calculateAndRenderSummary() {
+            const dates = getPayPeriodDates(state.currentDate);
+            let workDays = 0;
+            let consecutiveDays = 0;
+            let sevenDayBonuses = 0;
+
+            dates.forEach(d => {
+                const dateString = d.toISOString().split('T')[0];
+                if (emp.attendance[dateString] === 'N') {
+                    workDays++;
+                    consecutiveDays++;
+                    if (consecutiveDays === 7) {
+                        sevenDayBonuses++;
+                        consecutiveDays = 0; // Reset after bonus
+                    }
+                } else {
+                    consecutiveDays = 0; // Reset on day off
+                }
+            });
+
+            const baseSalary = workDays * DAILY_WAGE;
+            const bonusAmount = sevenDayBonuses * DAILY_WAGE;
+
+            // Get financial inputs
+            const financials = emp.financials || {};
+            const incomeHoliday = parseFloat(document.getElementById('income_holiday')?.value || financials.income_holiday || 0);
+            const incomeAllowance = parseFloat(document.getElementById('income_allowance')?.value || financials.income_allowance || 0);
+            const incomeDiligence = parseFloat(document.getElementById('income_diligence')?.value || financials.income_diligence || 0);
+            const incomeTraffic = parseFloat(document.getElementById('income_traffic')?.value || financials.income_traffic || 0);
+
+            const deductSocial = parseFloat(document.getElementById('deduct_social')?.value || financials.deduct_social || 0);
+            const deductInsurance = parseFloat(document.getElementById('deduct_insurance')?.value || financials.deduct_insurance || 0);
+            const deductAdvance = parseFloat(document.getElementById('deduct_advance')?.value || financials.deduct_advance || 0);
+            const deductEquipment = parseFloat(document.getElementById('deduct_equipment')?.value || financials.deduct_equipment || 0);
+
+            const totalIncome = baseSalary + bonusAmount + incomeHoliday + incomeAllowance + incomeDiligence + incomeTraffic;
+            const totalDeduction = deductSocial + deductInsurance + deductAdvance + deductEquipment;
+            const netIncome = totalIncome - totalDeduction;
+
+            summaryContent.innerHTML = `
+                <div class="summary-section">
+                    <div class="summary-title">รายรับ</div>
+                    <div class="summary-item"><label>ค่าแรงปกติ (${workDays} วัน)</label><span class="value">${baseSalary.toFixed(2)}</span></div>
+                    <div class="summary-item"><label>โบนัส 7 วัน (${sevenDayBonuses} ครั้ง)</label><span class="value">${bonusAmount.toFixed(2)}</span></div>
+                    <div class="summary-item"><label>วันหยุดนักขัตฤกษ์</label><input type="number" id="income_holiday" value="${incomeHoliday || ''}" placeholder="0.00"></div>
+                    <div class="summary-item"><label>เบี้ยเลี้ยง</label><input type="number" id="income_allowance" value="${incomeAllowance || ''}" placeholder="0.00"></div>
+                    <div class="summary-item"><label>เบี้ยขยัน</label><input type="number" id="income_diligence" value="${incomeDiligence || ''}" placeholder="0.00"></div>
+                    <div class="summary-item"><label>ค่าจราจร</label><input type="number" id="income_traffic" value="${incomeTraffic || ''}" placeholder="0.00"></div>
+                    <div class="summary-item"><label><b>รวมรายรับ</b></label><b class="value total-income">${totalIncome.toFixed(2)}</b></div>
+                </div>
+                <div class="summary-section">
+                    <div class="summary-title">รายจ่าย</div>
+                    <div class="summary-item"><label>ประกันสังคม</label><input type="number" id="deduct_social" value="${deductSocial || ''}" placeholder="0.00"></div>
+                    <div class="summary-item"><label>ประกันชีวิต</label><input type="number" id="deduct_insurance" value="${deductInsurance || ''}" placeholder="0.00"></div>
+                    <div class="summary-item"><label>เบิกล่วงหน้า</label><input type="number" id="deduct_advance" value="${deductAdvance || ''}" placeholder="0.00"></div>
+                    <div class="summary-item"><label>เบิกอุปกรณ์</label><input type="number" id="deduct_equipment" value="${deductEquipment || ''}" placeholder="0.00"></div>
+                    <div class="summary-item"><label><b>รวมรายจ่าย</b></label><b class="value total-deduction">${totalDeduction.toFixed(2)}</b></div>
+                </div>
+                <div class="net-income-section">
+                    <div class="net-income-label">รายรับสุทธิ</div>
+                    <div class="net-income-value">${netIncome.toFixed(2)}</div>
+                </div>
+            `;
+            
+            // Add event listeners to new inputs for real-time update
+            summaryContent.querySelectorAll('input').forEach(input => {
+                input.addEventListener('input', calculateAndRenderSummary);
+                if (!state.isAdmin) input.disabled = true;
+            });
+        }
+        
+        calculateAndRenderSummary();
+        summaryModal.style.display = 'flex';
+    }
+
+    function hideSummaryModal() {
+        // Save financial data before closing
+        const empId = summaryModalTitle.textContent.split(': ')[1];
+        const emp = state.employees.find(e => e.name === empId);
+        if (emp) {
+            emp.financials = {
+                income_holiday: parseFloat(document.getElementById('income_holiday')?.value || 0),
+                income_allowance: parseFloat(document.getElementById('income_allowance')?.value || 0),
+                income_diligence: parseFloat(document.getElementById('income_diligence')?.value || 0),
+                income_traffic: parseFloat(document.getElementById('income_traffic')?.value || 0),
+                deduct_social: parseFloat(document.getElementById('deduct_social')?.value || 0),
+                deduct_insurance: parseFloat(document.getElementById('deduct_insurance')?.value || 0),
+                deduct_advance: parseFloat(document.getElementById('deduct_advance')?.value || 0),
+                deduct_equipment: parseFloat(document.getElementById('deduct_equipment')?.value || 0),
+            };
+        }
+        summaryModal.style.display = 'none';
+    }
+
+    // --- EVENT LISTENERS ---
+    adminBtn.addEventListener('click', () => {
+        if (state.isAdmin) {
+            state.isAdmin = false;
+            renderApp();
+        } else {
+            const password = prompt('กรุณาใส่รหัสผ่าน Admin:');
+            if (password === 'admin') {
+                state.isAdmin = true;
+                renderApp();
+            } else if (password) {
+                alert('รหัสผ่านไม่ถูกต้อง!');
+            }
+        }
+    });
+
+    tableBody.addEventListener('click', (e) => {
+        const empId = e.target.closest('tr')?.dataset.id;
+        if (!empId) return;
+
+        if (e.target.closest('.summary-btn')) {
+            showSummaryModal(empId);
+            return;
+        }
+
+        if (!state.isAdmin) return;
+
+        const statusBtn = e.target.closest('.status-btn');
+        const editBtn = e.target.closest('.edit-btn');
+        const deleteBtn = e.target.closest('.delete-btn');
+
+        if (statusBtn) {
+            const date = statusBtn.dataset.date;
+            const employee = state.employees.find(emp => emp.id === empId);
+            if (employee) {
+                const currentStatus = employee.attendance[date] || 'F';
+                employee.attendance[date] = currentStatus === 'N' ? 'F' : 'N';
+                renderApp();
+            }
+        } else if (editBtn) {
+            showEmployeeModal('edit', empId);
+        } else if (deleteBtn) {
+            const emp = state.employees.find(e => e.id === empId);
+            if (confirm(`คุณต้องการลบพนักงาน "${emp.name}" ใช่หรือไม่?`)) {
+                state.employees = state.employees.filter(e => e.id !== empId);
+                renderApp();
+            }
+        }
+    });
+
+    addEmployeeBtn.addEventListener('click', () => showEmployeeModal('add'));
+    cancelBtn.addEventListener('click', hideEmployeeModal);
+    closeSummaryBtn.addEventListener('click', hideSummaryModal);
+
+    employeeForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const id = employeeIdInput.value;
+        const name = employeeNameInput.value;
+        const code = employeeCodeInput.value;
+
+        if (id) { // Edit mode
+            const emp = state.employees.find(e => e.id === id);
+            if (emp) {
+                emp.name = name;
+                emp.id = code;
+            }
+        } else { // Add mode
+            if (state.employees.some(e => e.id === code)) {
+                alert('รหัสพนักงานนี้มีอยู่แล้วในระบบ!');
+                return;
+            }
+            state.employees.push({ id: code, name: name, attendance: {}, financials: {} });
+        }
+        hideEmployeeModal();
+        renderApp();
+    });
+
+    document.getElementById('prevMonthBtn').addEventListener('click', () => {
+        state.currentDate.setMonth(state.currentDate.getMonth() - 1);
+        renderApp();
+    });
+    
+    document.getElementById('nextMonthBtn').addEventListener('click', () => {
+        state.currentDate.setMonth(state.currentDate.getMonth() + 1);
+        renderApp();
+    });
+
+    // --- INITIAL RENDER ---
+    renderApp();
+});
+</script>
+
+</body>
+</html>
