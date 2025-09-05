@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>จัดการเงิน</title>
+        
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;600;700&display=swap" rel="stylesheet">
+        
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header class="app-header">
+        <h1>การเงินส่วนบุคคล</h1>
+    </header>
+
+    <main class="container">
+        <section class="period-selector">
+            <button id="prev-month"><i class="fas fa-chevron-left"></i></button>
+            <h2 id="month-display">กันยายน 2568</h2>
+            <button id="next-month"><i class="fas fa-chevron-right"></i></button>
+        </section>
+
+        <section class="action-buttons">
+            <button id="add-income-btn" class="btn btn-income"><i class="fas fa-plus"></i> เพิ่มรายรับ</button>
+            <button id="add-expense-btn" class="btn btn-expense"><i class="fas fa-minus"></i> เพิ่มรายจ่าย</button>
+        </section>
+
+        <section class="transaction-list">
+            <h3>รายการล่าสุด</h3>
+            <ul id="transactions">
+                <!-- รายการจะแสดงที่นี่ -->
+                <li>
+                    <div class="t-icon" style="background-color: #22c55e40;"><i class="fas fa-briefcase" style="color: #22c55e;"></i></div>
+                    <div class="t-details">
+                        <span class="t-title">เงินเดือน</span>
+                        <span class="t-date">1 ก.ย. 2568</span>
+                    </div>
+                    <span class="t-amount income">+30,000.00</span>
+                </li>
+                <li>
+                    <div class="t-icon" style="background-color: #ef444440;"><img src="https://i.imgur.com/2V3S16q.png" alt="KBank"></div>
+                    <div class="t-details">
+                        <span class="t-title">จ่ายบัตร KBank Shopee</span>
+                        <span class="t-date">31 ส.ค. 2568</span>
+                    </div>
+                    <span class="t-amount expense">-5,400.00</span>
+                </li>
+            </ul>
+        </section>
+    </main>
+
+    <footer class="summary-footer">
+        <div class="summary-item">
+            <span class="label">รายรับ</span>
+            <span id="total-income" class="amount income">+45,000.00</span>
+        </div>
+        <div class="summary-item">
+            <span class="label">รายจ่าย</span>
+            <span id="total-expense" class="amount expense">-12,500.00</span>
+        </div>
+        <div class="summary-item net">
+            <span class="label">คงเหลือ</span>
+            <span id="net-balance" class="amount">32,500.00</span>
+        </div>
+    </footer>
+
+    <!-- Modal for adding transactions will go here -->
+
+    <script src="script.js"></script>
+</body>
+</html>
